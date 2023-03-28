@@ -1,13 +1,23 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io/fs"
 	"net/http"
+	"os"
 
 	"github.com/gophercises/urlshort"
 )
 
+type Options struct {
+	YAML string
+}
+
 func main() {
+	options := parseFlagOptions()
+	YAMLData := readYAMLFile(options)
+
 	mux := defaultMux()
 
 	// Build the MapHandler using the mux as the fallback
@@ -19,18 +29,28 @@ func main() {
 
 	// Build the YAMLHandler using the mapHandler as the
 	// fallback
-	yaml := `
-- path: /urlshort
-  url: https://github.com/gophercises/urlshort
-- path: /urlshort-final
-  url: https://github.com/gophercises/urlshort/tree/solution
-`
-	yamlHandler, err := urlshort.YAMLHandler([]byte(yaml), mapHandler)
+	yamlHandler, err := urlshort.YAMLHandler(YAMLData, mapHandler)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Starting the server on :8080")
 	http.ListenAndServe(":8080", yamlHandler)
+}
+
+func parseFlagOptions() Options {
+	var options Options
+	flag.StringVar(&options.YAML, "yaml", "", "yaml to load path/url combo from")
+	flag.Parse()
+	return options
+}
+
+func readYAMLFile(options Options) []byte {
+	data, err := fs.ReadFile(os.DirFS("."), options.YAML)
+	if err != nil {
+		fmt.Printf("unexpected error while reading YAML %q: %v\n", options.YAML, err)
+		os.Exit(1)
+	}
+	return data
 }
 
 func defaultMux() *http.ServeMux {
