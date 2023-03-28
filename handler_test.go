@@ -115,6 +115,78 @@ func TestYAMLHandler(t *testing.T) {
 	})
 }
 
+func TestJSONHandler(t *testing.T) {
+	t.Run("url provided", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/bar", nil)
+		respRec := httptest.NewRecorder()
+
+		JSONHandler, err := urlshort.JSONHandler([]byte(json), fbHandler)
+		if err != nil {
+			t.Fatalf("unexpected error from urlshort.JSONHandler: %v", err)
+		}
+
+		JSONHandler.ServeHTTP(respRec, req)
+		resp := respRec.Result()
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("unexpected error from io.ReadAll: %v", err)
+		}
+
+		got := string(bytes.TrimSpace(body))
+		want := "<a href=\"https://google.com\">See Other</a>."
+		if got != want {
+			t.Errorf("got %q want %q", got, want)
+		}
+	})
+
+	t.Run("url not provided", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/baz", nil)
+		respRec := httptest.NewRecorder()
+
+		JSONHandler, err := urlshort.JSONHandler([]byte(json), fbHandler)
+		if err != nil {
+			t.Fatalf("unexpected error from urlshort.JSONHandler: %v", err)
+		}
+
+		JSONHandler.ServeHTTP(respRec, req)
+		resp := respRec.Result()
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("unexpected error from io.ReadAll: %v", err)
+		}
+
+		got := string(bytes.TrimSpace(body))
+		want := "FALLBACK"
+		if got != want {
+			t.Errorf("got %q want %q", got, want)
+		}
+	})
+
+	t.Run("invalid json input", func(t *testing.T) {
+		json = `{a: 'j`
+		_, err := urlshort.JSONHandler([]byte(json), fbHandler)
+		if err == nil {
+			t.Fatal("expected error from urlshort.JSONHandler, got nil")
+		}
+	})
+}
+
+var json = `[
+{
+	"path": "/foo",
+	"url": "https://github.com"
+},
+{
+	"path": "/bar",
+	"url": "https://google.com"
+}
+]
+`
+
 var pathToUrls = map[string]string{
 	"/foo": "https://example.com",
 }
