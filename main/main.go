@@ -12,11 +12,13 @@ import (
 
 type Options struct {
 	YAML string
+	JSON string
 }
 
 func main() {
 	options := parseFlagOptions()
-	YAMLData := readYAMLFile(options)
+	YAMLData := readFile(options.YAML)
+	JSONData := readFile(options.JSON)
 
 	mux := defaultMux()
 
@@ -33,21 +35,30 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Build the JSONHandler using the mapHandler as the
+	// fallback
+	jsonHandler, err := urlshort.JSONHandler(JSONData, yamlHandler)
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", yamlHandler)
+	http.ListenAndServe(":8080", jsonHandler)
 }
 
 func parseFlagOptions() Options {
 	var options Options
 	flag.StringVar(&options.YAML, "yaml", "", "yaml to load path/url combo from")
+	flag.StringVar(&options.JSON, "json", "", "json to load path/url combo from")
 	flag.Parse()
 	return options
 }
 
-func readYAMLFile(options Options) []byte {
-	data, err := fs.ReadFile(os.DirFS("."), options.YAML)
+func readFile(fn string) []byte {
+	data, err := fs.ReadFile(os.DirFS("."), fn)
 	if err != nil {
-		fmt.Printf("unexpected error while reading YAML %q: %v\n", options.YAML, err)
+		fmt.Printf("unexpected error while reading YAML %q: %v\n", fn, err)
 		os.Exit(1)
 	}
 	return data

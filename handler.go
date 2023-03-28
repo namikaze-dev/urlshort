@@ -78,6 +78,13 @@ func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	}, nil
 }
 
+// JSONHandler will parse the provided JSON and then return
+// an http.HandlerFunc (which also implements http.Handler)
+// that will attempt to map any paths to their corresponding
+// URL. If the path is not provided in the JSON, then the
+// fallback http.Handler will be called instead.
+// The only errors that can be returned all related to having
+// invalid YAML data.
 func JSONHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	var parsedJSONs []ParsedJSON
 	err := yaml.Unmarshal(yml, &parsedJSONs)
